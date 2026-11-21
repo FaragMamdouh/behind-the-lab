@@ -34,7 +34,6 @@ export default function WriteReviewPage(){
   const [country,setCountry]=useState("");
   const [department,setDepartment]=useState("");
   const [researchField,setResearchField]=useState("");
-  const [period,setPeriod]=useState("");
   const [title,setTitle]=useState("");
   const [body,setBody]=useState("");
   const [recommend,setRecommend]=useState("yes");
@@ -57,7 +56,7 @@ export default function WriteReviewPage(){
     setCountry(params.get("country")??"");
   },[]);
 
-  const progress=useMemo(()=>[supervisorName,degree,role,institution,country,period,title,body,overall].filter(Boolean).length,[supervisorName,degree,role,institution,country,period,title,body,overall]);
+  const progress=useMemo(()=>[supervisorName,degree,role,institution,country,title,body,overall].filter(Boolean).length,[supervisorName,degree,role,institution,country,title,body,overall]);
 
   useEffect(()=>{
     if(!backendReady || !window.turnstile || !document.getElementById("btl-turnstile") || widgetId) return;
@@ -81,7 +80,7 @@ export default function WriteReviewPage(){
   async function submit(e:FormEvent){
     e.preventDefault();setError("");
     if(!backendReady){setError("The live submission service has not been configured yet. Please check back later.");return;}
-    if(!supervisorName.trim()||!institution.trim()||!country.trim()||!period.trim()||!title.trim()||body.trim().length<60||!overall||!firstHand||!policyAccepted||!turnstileToken){
+    if(!supervisorName.trim()||!institution.trim()||!country.trim()||!title.trim()||body.trim().length<60||!overall||!firstHand||!policyAccepted||!turnstileToken){
       setError("Please complete the required fields, the anti-spam check, and both confirmations.");return;
     }
     setBusy(true);
@@ -89,7 +88,7 @@ export default function WriteReviewPage(){
       const payload={
         supervisorName:supervisorName.trim(),supervisorTitle,institution:institution.trim(),
         country:country.trim(),department:department.trim(),researchField:researchField.trim(),
-        degreeLevel:degree,relationship:role,supervisionPeriod:period.trim(),
+        degreeLevel:degree,relationship:role,
         title:title.trim(),body:body.trim(),recommendation:recommend,overallRating:overall,
         categoryRatings:Object.fromEntries(Object.entries(ratings).filter(([,value])=>value!==undefined)),
         turnstileToken,website,firstHandExperience:firstHand,policyAccepted,
@@ -125,7 +124,6 @@ export default function WriteReviewPage(){
         <div className="form-field"><label htmlFor="department">Department (optional)</label><input id="department" value={department} onChange={(e)=>setDepartment(e.target.value)} placeholder="Department or research centre" maxLength={180}/></div>
         <div className="form-field"><label htmlFor="researchField">Research field (optional)</label><input id="researchField" value={researchField} onChange={(e)=>setResearchField(e.target.value)} placeholder="e.g. Immunology" maxLength={120}/></div>
         <div className="form-field full"><label htmlFor="role">Your supervision relationship *</label><select id="role" value={role} onChange={(e)=>setRole(e.target.value)}><option>Primary supervisor</option><option>Co-supervisor</option><option>Thesis advisor</option><option>Other mentoring role</option></select></div>
-        <div className="form-field full"><label htmlFor="period">Approximate supervision period *</label><input id="period" value={period} onChange={(e)=>setPeriod(e.target.value)} placeholder="e.g. 2022–2025 or 2024–present" required maxLength={80}/><small>Use approximate dates. Do not include a project title or details that could identify you.</small></div>
       </div></div>
       <div className="form-card"><h2>02. Rate the experience</h2><p>Select one to five stars for each category, or choose not applicable. Leave categories blank when you cannot evaluate them.</p><div className="rating-input-list">
         {ratingCategories.filter((category)=>category.key!=="overall_experience").map((category)=><div className="rating-input-row" key={category.key}><div><b>{category.label}</b><small>{category.help}</small></div><div className="rating-buttons" aria-label={`Rate ${category.label}`}>{[1,2,3,4,5].map((n)=><button type="button" key={n} className={(ratings[category.key]??0)>=n?"selected":""} aria-label={`${n} stars`} aria-pressed={(ratings[category.key]??0)>=n} onClick={()=>setRating(category.key,n)}><span>★</span></button>)}<button type="button" className={`na-button ${ratings[category.key]===null?"na-selected":""}`} onClick={()=>setRating(category.key,null)}>N/A</button></div></div>)}
@@ -139,7 +137,7 @@ export default function WriteReviewPage(){
       </div></div>
       <div className="form-card"><h2>04. Confirm before submitting</h2><div className="form-field" style={{marginBottom:14}}><label style={{display:"flex",gap:10,alignItems:"flex-start",fontWeight:500}}><input type="checkbox" checked={firstHand} onChange={(e)=>setFirstHand(e.target.checked)} style={{width:17,marginTop:3}}/> I confirm this review is based on my own first-hand supervision experience.</label></div><div className="form-field"><label style={{display:"flex",gap:10,alignItems:"flex-start",fontWeight:500}}><input type="checkbox" checked={policyAccepted} onChange={(e)=>setPolicyAccepted(e.target.checked)} style={{width:17,marginTop:3}}/> I have read and agree to the <Link href="/guidelines" className="text-link">community guidelines</Link>, and I have not included identifying or confidential information.</label></div><div style={{marginTop:20}}><b className="small">Anti-spam verification *</b><Script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" strategy="afterInteractive" onReady={()=>{if(!window.turnstile||!document.getElementById("btl-turnstile")||widgetId)return;const key=process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;if(!key)return;const id=window.turnstile.render(document.getElementById("btl-turnstile")!,{sitekey:key,action:"submit_review",theme:"light",callback:(token)=>setTurnstileToken(token),"expired-callback":()=>setTurnstileToken(""),"error-callback":()=>setTurnstileToken("")});setWidgetId(id);}}/><div id="btl-turnstile" style={{marginTop:10}}/>{!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY&&<small className="muted">Turnstile site key required for live submissions.</small>}</div></div>
       {error&&<p className="form-error" role="alert">{error}</p>}
-      <div className="form-submit-row"><span className="muted small">{progress}/9 key fields completed · Reviews are private until approved.</span><button className="button button-dark" type="submit" disabled={busy||!backendReady}>{busy?"Submitting…":"Submit for moderation"}<ShieldCheck size={16}/></button></div>
+      <div className="form-submit-row"><span className="muted small">{progress}/8 key fields completed · Reviews are private until approved.</span><button className="button button-dark" type="submit" disabled={busy||!backendReady}>{busy?"Submitting…":"Submit for moderation"}<ShieldCheck size={16}/></button></div>
     </form>
   </div></section>;
 }
