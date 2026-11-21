@@ -1,96 +1,78 @@
-# Behind the Lab — GitHub Pages Demo
+# Behind the Lab
 
-This repository is a **static demonstration** of the Behind the Lab graduate-supervisor review platform. It is adapted for GitHub Pages using Next.js static export.
+Behind the Lab is a student-centred academic supervisor review platform. The public website is statically hosted on GitHub Pages; Supabase provides a managed database and server-side submission function.
 
-> **Important:** All supervisor profiles and reviews are fictional sample data. This Pages site does not accept real reviews, create user accounts, send reports, or provide moderation. The review form stores a private preview in the current browser only. Do not submit real or identifying information.
+## Public submission flow
 
-## What works on GitHub Pages
+1. A visitor submits a first-hand experience without entering their name, email address, or student ID.
+2. Cloudflare Turnstile validates the visitor server-side.
+3. The Supabase Edge Function validates the fields and stores a review with status `pending`.
+4. If the supervisor is new, a supervisor suggestion is also stored with status `pending`.
+5. A moderator reviews the pending rows in the Supabase Dashboard. The profile must be approved and the review published before it is visible to the public.
+6. The directory and community profile pages show approved profiles and published reviews only.
 
-- Responsive homepage and navigation
-- Supervisor search, filtering, and sorting
-- Pre-generated sample supervisor profile pages
-- Sample rating summaries and review sorting
-- University directory
-- Review-form interaction stored only in the visitor's browser
-- About, community guidelines, and privacy-information pages
+The website does not promise absolute anonymity. Hosting, browser, anti-spam, and infrastructure providers may process technical request information. The application tables do not ask for or store a reviewer name, email, student ID, or IP address.
 
-## What requires a server and is not active here
+## Required one-time setup
 
-- Supabase authentication and email sign-in callbacks
-- Persisting reviews so other visitors can see them
-- Server-side review/report APIs
-- Moderator authentication, approval/rejection, and report handling
-- Supervisor claim and right-of-reply workflows
+### 1. Supabase
 
-GitHub Pages serves static HTML, CSS, and JavaScript. It does not run Next.js API routes or a Node.js server. For a real review service, deploy the full-stack version to a server-capable platform and connect a secured Supabase project. Do not put a Supabase service-role key or other secret in GitHub Pages or frontend code.
+Create a Supabase project at https://supabase.com/dashboard. In the SQL Editor, run the migration:
 
-## Publish on GitHub Pages
+`supabase/migrations/20261121000100_create_review_backend.sql`
 
-### 1. Create a GitHub repository
-
-1. Sign in to GitHub and select **New repository**.
-2. Name it `behind-the-lab` (or choose another name).
-3. For a public demo, set visibility to **Public**.
-4. Create the repository. Do not initialize it with a README, `.gitignore`, or licence if you plan to push this folder as-is.
-
-### 2. Upload this project
-
-Download/extract the project ZIP, open Terminal in the extracted `behind-the-lab-github-pages` folder, and run (replace `YOUR_GITHUB_USERNAME`):
-
-```bash
-git init
-git add .
-git commit -m "Add Behind the Lab demo website"
-git branch -M main
-git remote add origin https://github.com/YOUR_GITHUB_USERNAME/behind-the-lab.git
-git push -u origin main
-```
-
-If Git asks you to authenticate, use the sign-in window or GitHub's supported authentication method. Do not put a password or personal access token directly in the remote URL.
-
-### 3. Enable GitHub Pages
-
-1. Open the repository on GitHub.
-2. Go to **Settings → Pages**.
-3. Under **Build and deployment → Source**, choose **GitHub Actions**.
-4. The included workflow at `.github/workflows/deploy.yml` will build and deploy the site whenever you push to `main`.
-5. Open the **Actions** tab and wait for **Deploy Behind the Lab to GitHub Pages** to complete successfully.
-
-For a repository named `behind-the-lab`, the project site URL will be:
-
-`https://YOUR_GITHUB_USERNAME.github.io/behind-the-lab/`
-
-If you name the repository `YOUR_GITHUB_USERNAME.github.io`, GitHub uses the root URL `https://YOUR_GITHUB_USERNAME.github.io/`. The workflow automatically accounts for both URL layouts.
-
-## Run locally
-
-Requirements: Node.js 20.9+ (Node 22 recommended) and npm.
+Then deploy the Edge Function:
 
 ```bash
 npm install
-npm run dev
+npx supabase login
+npx supabase link --project-ref YOUR_PROJECT_REF
+npx supabase functions deploy submit-review --no-verify-jwt
 ```
 
-Open `http://localhost:3000`. To test the static export locally:
+In Supabase → Edge Functions → Secrets, add:
 
-```bash
-npm run build
-```
+- `REVIEW_SERVICE_ROLE_KEY`: the project's service-role/secret key. This is server-only and must never be added to GitHub Variables or frontend code.
+- `TURNSTILE_SECRET_KEY`: the Cloudflare Turnstile secret key.
 
-The static output is written to `out/`.
+Do not expose a service-role or secret key in a browser or GitHub Pages bundle.
 
-## Update the website
+### 2. Cloudflare Turnstile
 
-After changing files, commit and push them to the `main` branch:
+Create a Turnstile widget at https://dash.cloudflare.com/?to=/:account/turnstile. Add these hostnames:
 
-```bash
-git add .
-git commit -m "Update website"
-git push
-```
+- `faragmamdouh.github.io`
+- `localhost` (only if testing locally)
 
-GitHub Actions will rebuild and publish the site automatically.
+Use the visible site key in GitHub Variables, and the secret key in Supabase Edge Function Secrets.
 
-## Full-stack version
+The server validates tokens with Cloudflare Siteverify, including the configured hostname and action. A client-side widget by itself is not protection.
 
-The original full-stack Next.js project is a separate version and is not deployable to GitHub Pages as-is. It contains server API routes and authentication callbacks. Use a server-capable deployment (for example, Vercel) with Supabase for a live service. Before inviting students, complete the privacy, GDPR, moderation, defamation, security, and accessibility reviews described in the full-stack project's documentation.
+### 3. GitHub Actions variables
+
+In GitHub → Settings → Secrets and variables → Actions → Variables, add:
+
+- `NEXT_PUBLIC_SUPABASE_URL`: Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Supabase legacy anon/public key
+- `NEXT_PUBLIC_TURNSTILE_SITE_KEY`: Cloudflare Turnstile site key
+
+These are public browser configuration values. Do not add the Supabase service-role/secret key here.
+
+Push to `main` to rebuild the static Pages site. The submission form remains disabled until all three public variables are available at build time.
+
+## Moderation
+
+For this initial launch, moderate submissions in the Supabase Dashboard:
+
+- Review `supervisors` rows with `status = pending`; verify identity and institution using official institutional pages, then change status to `approved` or `rejected`.
+- Review `supervisor_reviews` rows with `status = pending`; review under the community rules, then change status to `published` or `rejected`.
+
+Only approved profiles and published reviews are exposed by RLS. Public users receive SELECT permission only; public INSERT/UPDATE/DELETE is not granted. The Edge Function uses its server-only key to create pending rows.
+
+## Important launch limitations
+
+- This is an early moderated-submission MVP, not a fully audited production service.
+- Manual moderation is through Supabase Studio; a dedicated moderator dashboard, appeals, supervisor right-of-reply, and report workflow still need implementation.
+- Turnstile offers bot filtering, not proof that a submission is true or that a person has only one review. Monitor abuse and add rate limiting and duplicate-review controls before scaling.
+- Confirm the correct GDPR data controller, lawful bases, privacy notice, retention policy, processor agreements, data-subject rights process, international transfers, and legal review before inviting a broad public audience.
+- All existing sample supervisors and sample reviews are fictional and remain labelled as such.

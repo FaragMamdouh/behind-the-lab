@@ -1,0 +1,4 @@
+project_id = "behind-the-lab"
+
+[functions.submit-review]
+verify_jwt = false

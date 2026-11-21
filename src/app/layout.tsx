@@ -9,5 +9,5 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
-  return <html lang="en"><body><SiteHeader /><div className="container" style={{paddingTop:12}}><div className="notice" role="note"><strong>Static demo:</strong>&nbsp; all sample profiles and reviews are fictional. No accounts, live submissions, reporting, or moderation are active on this site.</div></div><main>{children}</main><SiteFooter /></body></html>;
+  return <html lang="en"><body><SiteHeader /><div className="container" style={{paddingTop:12}}><div className="notice" role="note"><strong>Community reviews are moderated:</strong>&nbsp; only approved profiles and published experiences are displayed. Fictional sample profiles are clearly labelled.</div></div><main>{children}</main><SiteFooter /></body></html>;
 }
