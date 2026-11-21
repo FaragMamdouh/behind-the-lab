@@ -1,0 +1,2 @@
+import { Directory } from "@/components/Directory";
+export default function ExplorePage(){return <><section className="page-hero"><div className="container"><div className="breadcrumbs"><a href="/">Home</a> / Explore</div><span className="eyebrow">Supervisor directory</span><h1>Find a supervisor.<br/>Understand the experience.</h1><p>Search by name, university, country, or research area. Look across experiences rather than relying on a single score.</p></div></section><section className="section-sm"><div className="container"><Directory/></div></section></>}

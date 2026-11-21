@@ -1,0 +1,50 @@
+"use client";
+import { useMemo, useState, type FormEvent } from "react";
+import Link from "next/link";
+import { CheckCircle2, Info, LockKeyhole, ShieldCheck } from "lucide-react";
+import { ratingCategories, sampleSupervisors, type CategoryKey } from "@/data/supervisors";
+
+const emptyRatings = Object.fromEntries(ratingCategories.map((c)=>[c.key,undefined])) as Record<CategoryKey,number|null|undefined>;
+export default function WriteReviewPage(){
+  const [supervisorOptions]=useState(sampleSupervisors);
+  const liveDirectory=false;
+  const [supervisor,setSupervisor]=useState("");const [degree,setDegree]=useState("PhD");const [role,setRole]=useState("Primary supervisor");const [institution,setInstitution]=useState("");const [department,setDepartment]=useState("");const [period,setPeriod]=useState("");const [title,setTitle]=useState("");const [body,setBody]=useState("");const [recommend,setRecommend]=useState("yes");const [ratings,setRatings]=useState<Record<CategoryKey,number|null|undefined>>(emptyRatings);const [overall,setOverall]=useState<number|null>(null);const [busy,setBusy]=useState(false);const [error,setError]=useState("");const [success,setSuccess]=useState(false);
+  const progress=useMemo(()=>[supervisor,degree,role,institution,period,title,body,overall].filter(Boolean).length,[supervisor,degree,role,institution,period,title,body,overall]);
+  function setRating(key:CategoryKey,value:number|null|undefined){setRatings((old)=>({...old,[key]:value}));}
+  async function submit(e:FormEvent){e.preventDefault();setError("");if(!supervisor||!institution.trim()||!period.trim()||!title.trim()||body.trim().length<60||!overall){setError("Please complete the required fields. Your written experience must be at least 60 characters.");return;}setBusy(true);
+    try{
+      const payload={supervisorId:supervisor,degree,relationship:role,institution:institution.trim(),department:department.trim(),period:period.trim(),title:title.trim(),body:body.trim(),recommend,overallRating:overall,ratings:Object.entries(ratings).filter(([,rating])=>rating!==undefined).map(([category,rating])=>({category,rating}))};
+      const pending=JSON.parse(localStorage.getItem("btl_demo_pending_reviews")||"[]");
+      pending.push({...payload,id:`demo-${Date.now()}`,status:"pending-local-preview",submittedAt:new Date().toISOString(),publicLabel:`Anonymous ${degree} Student`});
+      localStorage.setItem("btl_demo_pending_reviews",JSON.stringify(pending));
+      setSuccess(true);
+    }catch(err){setError(err instanceof Error?err.message:"Something went wrong. Please try again.");}finally{setBusy(false);}
+  }
+  if(success)return <section className="section"><div className="container form-shell"><div className="success-panel"><div className="success-icon"><CheckCircle2 size={28}/></div><span className="eyebrow">Thank you for contributing</span><h2>Your demo preview has been saved.</h2><p>This was saved only in this browser as a local demonstration. It has not been sent to a server, reviewed by moderators, or made visible to other visitors.</p><div style={{display:"flex",justifyContent:"center",gap:10,flexWrap:"wrap",marginTop:20}}><Link href="/explore" className="button button-dark">Explore supervisors</Link><button className="button button-outline" onClick={()=>{setSuccess(false);setSupervisor("");setTitle("");setBody("");setRatings(emptyRatings);setOverall(null);}}>Write another review</button></div></div></div></section>;
+  return <section className="section"><div className="container form-shell">
+    <div className="form-intro"><div className="breadcrumbs"><Link href="/">Home</Link> / Share your experience</div><span className="eyebrow">Help the next student</span><h1>Share your experience.</h1><p>Your perspective can help another student understand what supervision is like beyond the project description. Positive, mixed, and negative experiences are all welcome when shared constructively.</p><p className="small">This static demonstration does not accept real submissions. Reviews are saved only in this browser.</p></div>
+    <div className="notice"><LockKeyhole size={19}/><div><b>Demonstration only — do not submit real experiences.</b><br/>This GitHub Pages version stores a preview in your browser's local storage. It is not transmitted to the platform, is not moderated, and cannot be seen by other visitors. Do not enter real names or identifying details. <Link href="/privacy" className="text-link">Read the privacy information</Link>.</div></div>
+    <form onSubmit={submit}>
+      <div className="form-card"><h2>01. Who are you reviewing?</h2><p>Help us attach your experience to the right academic profile.</p><div className="form-grid">
+        <div className="form-field full"><label htmlFor="supervisor">Supervisor *</label><select id="supervisor" value={supervisor} onChange={(e)=>{setSupervisor(e.target.value);if(e.target.value){const match=supervisorOptions.find(s=>s.id===e.target.value);if(match){setInstitution(match.university);setDepartment(match.department);}}}} required><option value="">Choose a supervisor</option>{supervisorOptions.map((s)=><option value={s.id} key={s.id}>{s.name} — {s.university}{s.isSample?" (sample)":""}</option>)}</select><small>{liveDirectory?"Profiles are sourced from the connected supervisor directory.":"The current demo contains fictional profiles only; it is not connected to a live supervisor directory."}</small></div>
+        <div className="form-field"><label htmlFor="degree">Degree level *</label><select id="degree" value={degree} onChange={(e)=>setDegree(e.target.value)}><option>Master's</option><option>PhD</option></select></div>
+        <div className="form-field"><label htmlFor="role">Your role *</label><select id="role" value={role} onChange={(e)=>setRole(e.target.value)}><option>Primary supervisor</option><option>Co-supervisor</option><option>Thesis advisor</option><option>Other mentoring role</option></select></div>
+        <div className="form-field"><label htmlFor="institution">University / institution *</label><input id="institution" value={institution} onChange={(e)=>setInstitution(e.target.value)} placeholder="Institution name" required maxLength={180}/></div>
+        <div className="form-field"><label htmlFor="department">Department (optional)</label><input id="department" value={department} onChange={(e)=>setDepartment(e.target.value)} placeholder="Department or research centre" maxLength={180}/></div>
+        <div className="form-field full"><label htmlFor="period">Approximate supervision period *</label><input id="period" value={period} onChange={(e)=>setPeriod(e.target.value)} placeholder="e.g. 2022–2025 or 2024–present" required maxLength={80}/><small>Use approximate dates. Do not include a project title or details that could identify you.</small></div>
+      </div></div>
+      <div className="form-card"><h2>02. Rate the experience</h2><p>Select one to five stars for each category, or choose not applicable. You can leave categories blank when you cannot evaluate them.</p><div className="rating-input-list">
+        {ratingCategories.map((category)=><div className="rating-input-row" key={category.key}><div><b>{category.label}</b><small>{category.help}</small></div><div className="rating-buttons" aria-label={`Rate ${category.label}`}>{[1,2,3,4,5].map((n)=><button type="button" key={n} className={(ratings[category.key]??0)>=n?"selected":""} aria-label={`${n} stars`} aria-pressed={(ratings[category.key]??0)>=n} onClick={()=>setRating(category.key,n)}><span>★</span></button>)}<button type="button" className={`na-button ${ratings[category.key]===null?"na-selected":""}`} onClick={()=>setRating(category.key,null)}>N/A</button></div></div>)}
+        <div className="rating-input-row"><div><b>Overall rating *</b><small>Your overall supervision experience</small></div><div className="rating-buttons">{[1,2,3,4,5].map((n)=><button type="button" key={n} className={overall!==null&&overall>=n?"selected":""} aria-label={`${n} stars overall`} aria-pressed={overall!==null&&overall>=n} onClick={()=>setOverall(n)}><span>★</span></button>)}</div></div>
+      </div></div>
+      <div className="form-card"><h2>03. Describe your experience</h2><p>Be specific, fair, and respectful. Focus on your own experience and avoid identifying yourself or other students.</p><div className="form-grid">
+        <div className="form-field full"><label htmlFor="title">Review title *</label><input id="title" value={title} onChange={(e)=>setTitle(e.target.value)} placeholder="Summarise your experience in a few words" required maxLength={120}/></div>
+        <div className="form-field full"><label htmlFor="body">Your experience *</label><textarea id="body" value={body} onChange={(e)=>setBody(e.target.value)} placeholder="What was supervision like day to day? Consider guidance, communication, feedback, independence, expectations, and work–life balance…" required minLength={60} maxLength={5000}/><small>{body.length}/5000 characters · Minimum 60 characters</small></div>
+        <div className="form-field"><label htmlFor="recommend">Would you recommend this supervisor?</label><select id="recommend" value={recommend} onChange={(e)=>setRecommend(e.target.value)}><option value="yes">Yes</option><option value="no">No</option><option value="unsure">Not sure</option></select></div>
+      </div></div>
+      <div className="notice"><Info size={19}/><div><b>Before submitting</b><br/>Avoid allegations you cannot substantiate, private information, insults, or details that identify students or third parties. A future live platform would moderate reviews under transparent community guidelines. Nothing is published by this demonstration.</div></div>
+      {error&&<p className="form-error" role="alert">{error}</p>}
+      <div className="form-submit-row"><span className="muted small">{progress}/8 key fields completed · Local preview only; nothing is published.</span><button className="button button-dark" type="submit" disabled={busy}>{busy?"Saving…":"Save demo preview"}<ShieldCheck size={16}/></button></div>
+    </form>
+  </div></section>;
+}

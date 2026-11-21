@@ -1,0 +1,3 @@
+import Link from "next/link";
+import { Search } from "lucide-react";
+export default function NotFound(){return <section className="section"><div className="container narrow text-center"><div className="feature-icon" style={{margin:"0 auto 18px"}}><Search size={22}/></div><span className="eyebrow">404 · Not found</span><h1 style={{fontSize:"2.7rem",margin:"12px 0"}}>We couldn't find that profile.</h1><p className="muted">The supervisor may not exist, may have been archived, or the address may be incorrect.</p><Link className="button button-dark" href="/explore">Explore supervisors</Link></div></section>}
