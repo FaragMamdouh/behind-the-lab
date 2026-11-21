@@ -80,7 +80,6 @@ Deno.serve(async (req: Request) => {
     const researchField = cleanText(payload.researchField, 120) || "Not specified";
     const degreeLevel = cleanText(payload.degreeLevel, 20);
     const relationship = cleanText(payload.relationship, 40);
-    const supervisionPeriod = cleanText(payload.supervisionPeriod, 80);
     const title = cleanText(payload.title, 120);
     const body = cleanText(payload.body, 5000);
     const recommendation = cleanText(payload.recommendation, 10);
@@ -88,7 +87,7 @@ Deno.serve(async (req: Request) => {
 
     if (supervisorName.length < 2 || institution.length < 2 || country.length < 2 ||
         !allowedDegrees.has(degreeLevel) || !allowedRoles.has(relationship) ||
-        !supervisionPeriod || title.length < 5 || body.length < 60 ||
+        title.length < 5 || body.length < 60 ||
         !allowedRecommendations.has(recommendation) ||
         !Number.isInteger(overallRating) || overallRating < 1 || overallRating > 5 ||
         payload.firstHandExperience !== true || payload.policyAccepted !== true) {
@@ -132,7 +131,7 @@ Deno.serve(async (req: Request) => {
 
     const inserted = await admin.from("supervisor_reviews").insert({
       supervisor_id: supervisorId, degree_level: degreeLevel, relationship, institution, department,
-      supervision_period: supervisionPeriod, category_ratings: categoryRatings,
+      supervision_period: "", category_ratings: categoryRatings,
       overall_rating: overallRating, title, body, recommendation, status: "pending",
     }).select("id").single();
 
